@@ -161,6 +161,85 @@ enum TextWidthBasis {
   longestLine,
 }
 
+/// A [TextBoundary] subclass for locating glyph clusters.
+///
+/// The underlying implementation uses the paragraph's glyph information.
+class GlyphBoundary extends TextBoundary {
+  /// Creates a [GlyphBoundary] with the text and layout information.
+  GlyphBoundary._(this._paragraph);
+
+  final ui.Paragraph _paragraph;
+
+  @override
+  int? getLeadingTextBoundaryAt(int position) {
+    if (position < 0) {
+      return null;
+    }
+    GlyphInfo? glyphInfo = _paragraph.getGlyphInfoAt(position);
+    if (glyphInfo == null) {
+      // if (position > 0) {
+      //   // TODO(tgucio): handle multiple end of line?
+      //   glyphInfo = _paragraph.getGlyphInfoAt(position - 1);
+      // }
+      // print('  getLeadingTextBoundaryAt AGAIN $position -> ${glyphInfo?.graphemeClusterLayoutBounds.left} '
+      //   '[${glyphInfo?.graphemeClusterCodeUnitRange.start}-${glyphInfo?.graphemeClusterCodeUnitRange.end}]');
+      // if (glyphInfo != null) {
+      //   return glyphInfo.writingDirection == TextDirection.ltr
+      //       ? glyphInfo.graphemeClusterCodeUnitRange.start
+      //       : glyphInfo.graphemeClusterCodeUnitRange.end;
+      // }
+      return null;
+    }
+
+    // final GlyphInfo? glyphInfoL = _paragraph.getGlyphInfoAt(glyphInfo.graphemeClusterCodeUnitRange.start - 1);
+    // final GlyphInfo? glyphInfoR = _paragraph.getGlyphInfoAt(glyphInfo.graphemeClusterCodeUnitRange.end);
+    // print('  getLeadingTextBoundaryAt $position -> ${glyphInfo.graphemeClusterLayoutBounds.left}'
+    //   '  L: ${glyphInfoL?.graphemeClusterLayoutBounds.left} [${glyphInfoL?.graphemeClusterCodeUnitRange.start}-${glyphInfoL?.graphemeClusterCodeUnitRange.end}]  |'
+    //   '  R: ${glyphInfoR?.graphemeClusterLayoutBounds.left} [${glyphInfoR?.graphemeClusterCodeUnitRange.start}-${glyphInfoR?.graphemeClusterCodeUnitRange.end}]');
+
+    return glyphInfo.writingDirection == TextDirection.ltr
+        ? glyphInfo.graphemeClusterCodeUnitRange.start
+        : glyphInfo.graphemeClusterCodeUnitRange.end;
+  }
+
+  // TODO(tgucio) fold both into GetTextBoundaryAt()
+  @override
+  int? getTrailingTextBoundaryAt(int position) {
+    if (position < 0) {
+      return null;
+    }
+    GlyphInfo? glyphInfo = _paragraph.getGlyphInfoAt(position);
+    if (glyphInfo == null) {
+      // if (position > 0) {
+      //   // TODO(tgucio): handle multiple end of line?
+      //   glyphInfo = _paragraph.getGlyphInfoAt(position - 1);
+      // }
+      // // print('  getTrailingTextBoundaryAt AGAIN $position -> ${glyphInfo?.graphemeClusterLayoutBounds.left} '
+      //   // '[${glyphInfo?.graphemeClusterCodeUnitRange.start}-${glyphInfo?.graphemeClusterCodeUnitRange.end}]');
+      // if (glyphInfo != null) {
+      //   return glyphInfo.writingDirection == TextDirection.ltr
+      //       ? glyphInfo.graphemeClusterCodeUnitRange.end
+      //       : glyphInfo.graphemeClusterCodeUnitRange.start;
+      // }
+      return null;
+    }
+
+    // final GlyphInfo? glyphInfoL = _paragraph.getGlyphInfoAt(glyphInfo.graphemeClusterCodeUnitRange.start - 1);
+    // final GlyphInfo? glyphInfoR = _paragraph.getGlyphInfoAt(glyphInfo.graphemeClusterCodeUnitRange.end);
+    // print('  getTrailingTextBoundaryAt $position -> ${glyphInfo.graphemeClusterLayoutBounds.left}'
+    //   '  L: ${glyphInfoL?.graphemeClusterLayoutBounds.left} [${glyphInfoL?.graphemeClusterCodeUnitRange.start}-${glyphInfoL?.graphemeClusterCodeUnitRange.end}]  |'
+    //   '  R: ${glyphInfoR?.graphemeClusterLayoutBounds.left} [${glyphInfoR?.graphemeClusterCodeUnitRange.start}-${glyphInfoR?.graphemeClusterCodeUnitRange.end}]');
+
+    return glyphInfo.writingDirection == TextDirection.ltr
+        ? glyphInfo.graphemeClusterCodeUnitRange.end
+        : glyphInfo.graphemeClusterCodeUnitRange.start;
+  }
+
+  /// Returns a [TextBoundary] suitable for handling keyboard navigation
+  /// commands that change the current selection glyph by glyph.
+  late final TextBoundary moveByGlyphBoundary = this;
+}
+
 /// A [TextBoundary] subclass for locating word breaks.
 ///
 /// The underlying implementation uses [UAX #29](https://unicode.org/reports/tr29/)
@@ -1709,6 +1788,15 @@ class TextPainter {
     final _TextPainterLayoutCacheWithOffset cachedLayout = _layoutCache!;
     return cachedLayout.paragraph.getPositionForOffset(offset - cachedLayout.paintOffset);
   }
+
+  /// Returns a [TextBoundary] that can be used to perform glyph boundary analysis
+  /// on the current [text].
+  ///
+  /// This [TextBoundary] uses the underlying paragraphs' glyph information.
+  ///
+  /// Currently glyph boundary analysis can only be performed after [layout]
+  /// has been called.
+  GlyphBoundary get glyphBoundaries => GlyphBoundary._(_layoutCache!.paragraph);
 
   /// {@template flutter.painting.TextPainter.getWordBoundary}
   /// Returns the text range of the word at the given offset. Characters not
